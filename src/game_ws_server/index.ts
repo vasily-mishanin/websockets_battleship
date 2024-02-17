@@ -5,6 +5,8 @@ const WSS_PORT = 3000;
 
 export const wss = new WebSocketServer({ port: WSS_PORT });
 
+const players = { player1: {}, player2: {} };
+
 wss.on('connection', function connection(ws) {
   ws.on('message', function message(rawData) {
     console.log('RESEIVED: %s', rawData);
@@ -12,7 +14,10 @@ wss.on('connection', function connection(ws) {
     const messageType = data.type;
     if (messageType === 'reg') {
       const userCreds: UserCreds = JSON.parse(data.data);
-      console.log({ userCreds });
+
+      players.player1 = { ...userCreds };
+      console.log({ players });
+
       const userDataForResponse: RegResponse = {
         name: userCreds.name,
         index: 0,
@@ -23,6 +28,7 @@ wss.on('connection', function connection(ws) {
       const response: RawMessage = {
         type: 'reg',
         data: JSON.stringify(userDataForResponse),
+        id: 0,
       };
       ws.send(JSON.stringify(response));
     }
