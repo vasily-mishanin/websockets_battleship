@@ -1,12 +1,12 @@
-export type GameResponseType =
+export type MessageType =
   | 'reg'
+  | 'update_room'
+  | 'update_winners'
   | 'create_game'
   | 'start_game'
   | 'turn'
   | 'attack'
   | 'finish'
-  | 'update_room'
-  | 'update_winners'
   | 'create_room'
   | 'add_user_to_room'
   | 'randomAttack';
@@ -24,9 +24,19 @@ export type Ship = {
 };
 
 export interface RawMessage {
-  type: GameResponseType;
+  type: MessageType;
   data: string;
   id: 0;
+}
+
+export interface User {
+  name: string;
+  index: number;
+}
+
+export interface Room {
+  roomId: number;
+  roomUsers: User[];
 }
 
 // types for "data" object
@@ -42,16 +52,13 @@ export interface RegResponse {
   errorText: string;
 }
 
-export type WinnersUpdate = { name: string; wins: number }[];
+export type Winners = { name: string; wins: number }[];
 
 export type RoomAddUser = {
   indexRoom: number;
 };
 
-export type RoomUpdate = {
-  roomId: number;
-  roomUsers: { name: string; index: number }[];
-}[];
+export type Rooms = Room[];
 
 export type GameCreate = {
   idGame: number;
