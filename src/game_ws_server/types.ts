@@ -60,7 +60,7 @@ export type RoomAddUser = {
 
 export type Rooms = Room[];
 
-export type GameCreate = {
+export type Game = {
   idGame: number;
   idPlayer: number; // id for player in the game session, who have sent add_user_to_room request, not enemy
 };

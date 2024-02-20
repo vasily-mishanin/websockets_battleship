@@ -4,3 +4,9 @@ export function getId() {
     return ++id;
   };
 }
+
+// // Function to broadcast a message to all connected clients
+// export function broadcast(message) {
+//   clients.forEach(client => {
+//     client.ws.send(message);
+//   });
