@@ -1,3 +1,5 @@
+import { RawMessage, WsConnection } from './types';
+
 export function getId() {
   let id = 0;
   return function () {
@@ -5,8 +7,9 @@ export function getId() {
   };
 }
 
-// // Function to broadcast a message to all connected clients
-// export function broadcast(message) {
-//   clients.forEach(client => {
-//     client.ws.send(message);
-//   });
+// Function to broadcast a message to all connected clients
+export function broadcast(connections: WsConnection[], message: RawMessage) {
+  connections.forEach((connection) => {
+    connection.ws.send(JSON.stringify(message));
+  });
+}

@@ -1,3 +1,7 @@
+import WebSocket from 'ws';
+
+export type WsConnection = { id: number; ws: WebSocket };
+
 export type MessageType =
   | 'reg'
   | 'update_room'
@@ -52,7 +56,7 @@ export interface RegResponse {
   errorText: string;
 }
 
-export type Winners = { name: string; wins: number }[];
+export type Winner = { name: string; wins: number };
 
 export type RoomAddUser = {
   indexRoom: number;

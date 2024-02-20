@@ -8,9 +8,14 @@ import {
   Rooms,
   User,
   UserCreds,
-  Winners,
+  Winner,
+  WsConnection,
 } from './types';
 import { getId } from './utils';
+import { registerUser } from './registerUser';
+import { updateRooms } from './updateRooms';
+import { updateWinners } from './updateWinners';
+import { createGame } from './createGame';
 
 const WSS_PORT = 3000;
 
@@ -18,11 +23,11 @@ export const wss = new WebSocketServer({ port: WSS_PORT });
 
 const players: User[] = [];
 let rooms: Rooms = [];
-const winners: Winners = [];
+const winners: Winner[] = [];
 const games: { room: Room; game: Game; players: [User, User] }[] = [];
 
 const id = getId();
-const connections: { id: number; ws: WebSocket }[] = [];
+const connections: WsConnection[] = [];
 
 wss.on('connection', function connection(ws) {
   const clientId = id();
@@ -31,61 +36,24 @@ wss.on('connection', function connection(ws) {
   console.log('client ID - ', clientId);
   ws.on('message', function message(rawData) {
     console.log(`RESEIVED from ${clientId}: %s`, rawData);
-    // const player1 = players.player1;
-    // const player2 = players.player2;
     const incomingData: RawMessage = JSON.parse(rawData.toString());
     const messageType = incomingData.type;
 
     console.log(clientId, incomingData);
 
-    // handlers
+    // HANDLERS
     // register
-
     if (messageType === 'reg') {
       const userCreds: UserCreds = JSON.parse(incomingData.data);
-      //const userId = id();
       players.push({ index: clientId, name: userCreds.name });
       console.log({ players });
-
-      const userDataForResponse: RegResponse = {
-        name: userCreds.name,
-        index: clientId,
-        error: false,
-        errorText: '',
-      };
-
-      const response: RawMessage = {
-        type: 'reg',
-        data: JSON.stringify(userDataForResponse),
-        id: 0,
-      };
-      ws.send(JSON.stringify(response));
-
-      // update room
-      const response1: RawMessage = {
-        type: 'update_room',
-        data: JSON.stringify(rooms),
-        id: 0,
-      };
-      console.log({ rooms });
-      connections.forEach((connection) => {
-        connection.ws.send(JSON.stringify(response1));
-      });
-      // update winners
-      const response2: RawMessage = {
-        type: 'update_winners',
-        data: JSON.stringify(winners),
-        id: 0,
-      };
-      console.log({ winners });
-
-      connections.forEach((connection) => {
-        connection.ws.send(JSON.stringify(response2));
-      });
+      registerUser({ userCreds, clientId, ws });
+      updateRooms(rooms, connections);
+      updateWinners(winners, connections);
     }
 
+    // Create new room (create game room and add yourself there)
     if (messageType === 'create_room' && players[0]) {
-      // Create new room (create game room and add yourself there)
       // update rooms
       const player = players.find((player) => player.index === clientId);
       if (!player) {
@@ -96,19 +64,10 @@ wss.on('connection', function connection(ws) {
         roomUsers: [player],
       });
 
-      const response1: RawMessage = {
-        type: 'update_room',
-        data: JSON.stringify(rooms),
-        id: 0,
-      };
-
-      console.log({ rooms });
-      connections.forEach((connection) => {
-        connection.ws.send(JSON.stringify(response1));
-      });
+      updateRooms(rooms, connections);
     }
 
-    //add youself (user) to somebodys room, then remove the room from available rooms list
+    // Add youself (user) to somebodys room, then remove the room from available rooms list
     if (messageType === 'add_user_to_room') {
       const { indexRoom }: RoomAddUser = JSON.parse(incomingData.data);
       const user = players.find((player) => player.index === clientId);
@@ -140,16 +99,7 @@ wss.on('connection', function connection(ws) {
         room.roomUsers.every((u) => u.index !== user.index)
       );
 
-      // update rooms - send for all players
-      const response1: RawMessage = {
-        type: 'update_room',
-        data: JSON.stringify(rooms),
-        id: 0,
-      };
-      connections.forEach((connection) => {
-        connection.ws.send(JSON.stringify(response1));
-      });
-
+      updateRooms(rooms, connections);
       // create game - send for both players in the room
       const game: Game = {
         idGame: id(),
@@ -163,17 +113,7 @@ wss.on('connection', function connection(ws) {
       });
 
       console.log('games - ', games);
-
-      const response2: RawMessage = {
-        type: 'create_game',
-        data: JSON.stringify(game),
-        id: 0,
-      };
-
-      // TODO: add broadcast function
-      connections.forEach((connection) => {
-        connection.ws.send(JSON.stringify(response2));
-      });
+      createGame(game, connections);
     }
   });
 });
