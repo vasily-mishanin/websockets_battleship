@@ -1,11 +1,13 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import {
   Game,
+  GameShips,
   RawMessage,
   RegResponse,
   Room,
   RoomAddUser,
   Rooms,
+  ShipsAdd,
   User,
   UserCreds,
   Winner,
@@ -16,6 +18,7 @@ import { registerUser } from './registerUser';
 import { updateRooms } from './updateRooms';
 import { updateWinners } from './updateWinners';
 import { createGame } from './createGame';
+import { startGame } from './startGame';
 
 const WSS_PORT = 3000;
 
@@ -25,6 +28,7 @@ const players: User[] = [];
 let rooms: Rooms = [];
 const winners: Winner[] = [];
 const games: { room: Room; game: Game; players: [User, User] }[] = [];
+const shipsAddedToGames: GameShips[] = [];
 
 const id = getId();
 const connections: WsConnection[] = [];
@@ -114,6 +118,19 @@ wss.on('connection', function connection(ws) {
 
       console.log('games - ', games);
       createGame(game, connections);
+    }
+
+    if (messageType === 'add_ships') {
+      const receivedShips: ShipsAdd = JSON.parse(incomingData.data);
+      shipsAddedToGames.push({ ships: receivedShips, connection: ws });
+      // ships with their connections
+      const shipsOfOneGame = shipsAddedToGames.filter(
+        (ship) => ship.ships.gameId === receivedShips.gameId
+      );
+      if (shipsOfOneGame.length > 1) {
+        console.log('start_game');
+        startGame(shipsOfOneGame);
+      }
     }
   });
 });

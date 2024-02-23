@@ -8,5 +8,7 @@ wss.on('connection', (stream) => {
 });
 
 httpServer.listen(HTTP_PORT, () => {
-  console.log(`Start static http server on port ${HTTP_PORT}`);
+  console.log(
+    `Start static http server on port ${HTTP_PORT} - http://localhost:${HTTP_PORT}/`
+  );
 });

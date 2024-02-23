@@ -13,6 +13,7 @@ export type MessageType =
   | 'finish'
   | 'create_room'
   | 'add_user_to_room'
+  | 'add_ships'
   | 'randomAttack';
 
 export type ShipType = 'small' | 'medium' | 'large' | 'huge';
@@ -109,3 +110,5 @@ export type AttackRandom = {
 export type InfoCurrentTurn = {
   currentPlayer: number /* id of the player in the current game session */;
 };
+
+export type GameShips = { ships: ShipsAdd; connection: WebSocket };
