@@ -107,7 +107,7 @@ export type AttackRandom = {
   indexPlayer: number /* id of the player in the current game session */;
 };
 
-export type InfoCurrentTurn = {
+export type GameTurn = {
   currentPlayer: number /* id of the player in the current game session */;
 };
 

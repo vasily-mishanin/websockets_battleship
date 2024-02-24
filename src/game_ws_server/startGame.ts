@@ -6,6 +6,7 @@ export function startGame(gameShipsData: GameShips[]) {
       currentPlayerIndex: gameShips.ships.indexPlayer,
       ships: gameShips.ships.ships,
     };
+    console.log('startGame --- ', game);
     const message: RawMessage = {
       type: 'start_game',
       data: JSON.stringify(game),
