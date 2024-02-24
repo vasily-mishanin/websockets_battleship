@@ -4,6 +4,7 @@ import {
   AttackFeedback,
   Game,
   GameShips,
+  ProcessedGameShips,
   RawMessage,
   RegResponse,
   Room,
@@ -15,13 +16,13 @@ import {
   Winner,
   WsConnection,
 } from './types';
-import { checkUserAndRoom, getId } from './utils';
+import { checkUserAndRoom, getId, processAttack, processShip } from './utils';
 import { registerUser } from './registerUser';
 import { updateRooms } from './updateRooms';
 import { updateWinners } from './updateWinners';
 import { createGame } from './createGame';
 import { startGame } from './startGame';
-import { turn } from './turn';
+import { makeTurn, turn } from './turn';
 
 const WSS_PORT = 3000;
 
@@ -32,6 +33,8 @@ let rooms: Rooms = [];
 const winners: Winner[] = [];
 const games: { room: Room; gameId: number }[] = [];
 const shipsAddedToGames: GameShips[] = [];
+let processedGameShips: ProcessedGameShips[] = [];
+let currentAttacker = 0;
 
 const id = getId();
 const connections: WsConnection[] = [];
@@ -137,25 +140,47 @@ wss.on('connection', function connection(ws) {
     if (messageType === 'add_ships') {
       const receivedShips: ShipsAdd = JSON.parse(incomingData.data);
       shipsAddedToGames.push({ ships: receivedShips, connection: ws });
+      //processed ships
+      processedGameShips.push({
+        gameId: receivedShips.gameId,
+        indexPlayer: receivedShips.indexPlayer,
+        connection: ws,
+        ships: receivedShips.ships.map((ship) => processShip(ship)),
+      });
       // game ships with their connections (clients)
       const shipsOfOneGame = shipsAddedToGames.filter(
-        (ship) => ship.ships.gameId === receivedShips.gameId
+        (shipData) => shipData.ships.gameId === receivedShips.gameId
       );
+      // if both players send their ships
       if (shipsOfOneGame.length > 1) {
-        console.log('start_game');
+        console.log('start_game', shipsOfOneGame);
         startGame(shipsOfOneGame);
         console.log('turn');
-        turn(shipsOfOneGame);
+        const gameConnections = shipsOfOneGame.map((item) => item.connection);
+        turn(currentClient.id, gameConnections);
+        currentAttacker = currentClient.id;
       }
     }
 
     if (messageType === 'attack') {
       const attack: Attack = JSON.parse(incomingData.data);
       console.log({ attack });
+      if (attack.indexPlayer !== currentAttacker) {
+        return;
+      }
+
+      const { status, updatedShips } = processAttack(
+        processedGameShips,
+        attack
+      );
+
+      processedGameShips = updatedShips;
+
+      // respond to attacker
       const attackFeedback: AttackFeedback = {
-        currentPlayer: clientId,
+        currentPlayer: attack.indexPlayer, // attacker
         position: { x: attack.x, y: attack.y },
-        status: 'miss',
+        status,
       };
 
       const message: RawMessage = {
@@ -165,6 +190,33 @@ wss.on('connection', function connection(ws) {
       };
 
       currentClient.ws.send(JSON.stringify(message));
+      // // attacked id
+      // const attacked = processedGameShips
+      //   .filter((game) => game.gameId === attack.gameId)
+      //   .find((item) => item.indexPlayer !== attack.indexPlayer);
+
+      // console.log({ attacker: currentClient.id });
+      // console.log({ attacked: attacked?.indexPlayer });
+
+      const gameData = processedGameShips.filter(
+        (data) => data.gameId === attack.gameId
+      );
+      const gameConnections = gameData.map((data) => data.connection);
+      const anotherPlayerId = gameData.find(
+        (data) => data.indexPlayer !== attack.indexPlayer
+      )?.indexPlayer;
+
+      if (status === 'miss' && anotherPlayerId) {
+        turn(anotherPlayerId, gameConnections);
+        currentAttacker = anotherPlayerId;
+      } else if (status === 'shot') {
+        turn(attack.indexPlayer, gameConnections);
+      } else {
+        // killed
+        // TODO: logic for killed - send state for all cells around killed ship (bagaBUM)
+        // TODO: logic if all ships killed
+        turn(attack.indexPlayer, gameConnections);
+      }
     }
   });
 });

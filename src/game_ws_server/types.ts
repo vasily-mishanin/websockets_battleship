@@ -18,6 +18,8 @@ export type MessageType =
 
 export type ShipType = 'small' | 'medium' | 'large' | 'huge';
 
+export type HitStatus = 'miss' | 'killed' | 'shot';
+
 export type Ship = {
   position: {
     x: number;
@@ -99,7 +101,7 @@ export type AttackFeedback = {
     y: number;
   };
   currentPlayer: number /* id of the player in the current game session */;
-  status: 'miss' | 'killed' | 'shot';
+  status: HitStatus;
 };
 
 export type AttackRandom = {
@@ -111,4 +113,16 @@ export type GameTurn = {
   currentPlayer: number /* id of the player in the current game session */;
 };
 
-export type GameShips = { ships: ShipsAdd; connection: WebSocket };
+export type GameShips = { ships: ShipsAdd; connection: WebSocket }; // for one player
+
+export type ProcessedShip = Ship & {
+  positions: { x: number; y: number }[];
+  hittings: { x: number; y: number }[];
+};
+
+export type ProcessedGameShips = {
+  gameId: number;
+  indexPlayer: number;
+  ships: ProcessedShip[];
+  connection: WebSocket;
+};
