@@ -4,6 +4,7 @@ import {
   AttackFeedback,
   Game,
   GameShips,
+  Position,
   ProcessedGameShips,
   RawMessage,
   RegResponse,
@@ -16,7 +17,13 @@ import {
   Winner,
   WsConnection,
 } from './types';
-import { checkUserAndRoom, getId, processShip } from './utils';
+import {
+  checkUserAndRoom,
+  getId,
+  getRandomPositionToAttack,
+  hasAlreadyAttacked,
+  processShip,
+} from './utils';
 import { registerUser } from './registerUser';
 import { updateRooms } from './updateRooms';
 import { updateWinners } from './updateWinners';
@@ -45,8 +52,9 @@ wss.on('connection', function connection(ws) {
   const clientId = id();
   const currentClient = { id: clientId, ws };
   connections.push(currentClient);
+  const attackedEnemyPositions: Position[] = [];
 
-  console.log('client ID - ', clientId);
+  console.log('Connection - client ID - ', clientId);
   ws.on('message', function message(rawData) {
     console.log(`RESEIVED from client ${clientId}: %s`, rawData);
     const incomingData: RawMessage = JSON.parse(rawData.toString());
@@ -164,12 +172,48 @@ wss.on('connection', function connection(ws) {
       }
     }
 
-    if (messageType === 'attack') {
-      const attack: Attack = JSON.parse(incomingData.data);
-      console.log({ attack });
+    if (messageType === 'attack' || messageType === 'randomAttack') {
+      let attack: Attack = JSON.parse(incomingData.data);
+
       // if not user's turn
       if (attack.indexPlayer !== currentAttacker) {
         return;
+      }
+
+      const gameData = processedGameShips.filter(
+        (data) => data.gameId === attack.gameId
+      );
+      const gameConnections = gameData.map((data) => data.connection);
+      const anotherPlayerId = gameData.find(
+        (data) => data.indexPlayer !== attack.indexPlayer
+      )?.indexPlayer;
+
+      if (messageType === 'attack') {
+        if (
+          hasAlreadyAttacked(attackedEnemyPositions, {
+            x: attack.x,
+            y: attack.y,
+          })
+        ) {
+          console.log('You have already attacked this position!');
+          turn(attack.indexPlayer, gameConnections);
+          return;
+        }
+
+        attackedEnemyPositions.push({ x: attack.x, y: attack.y });
+      }
+
+      console.log({ attack });
+
+      if (messageType === 'randomAttack') {
+        attack = JSON.parse(incomingData.data);
+        let randomPosition = getRandomPositionToAttack();
+        while (hasAlreadyAttacked(attackedEnemyPositions, randomPosition)) {
+          randomPosition = getRandomPositionToAttack();
+        }
+        attack.x = randomPosition.x;
+        attack.y = randomPosition.y;
+        attackedEnemyPositions.push(randomPosition);
       }
 
       const { status, updatedShips, attackedShip } = processAttack(
@@ -195,14 +239,6 @@ wss.on('connection', function connection(ws) {
       currentClient.ws.send(JSON.stringify(message));
 
       // define whose next turn is
-      const gameData = processedGameShips.filter(
-        (data) => data.gameId === attack.gameId
-      );
-      const gameConnections = gameData.map((data) => data.connection);
-      const anotherPlayerId = gameData.find(
-        (data) => data.indexPlayer !== attack.indexPlayer
-      )?.indexPlayer;
-
       if (status === 'miss' && anotherPlayerId) {
         turn(anotherPlayerId, gameConnections);
         currentAttacker = anotherPlayerId;
@@ -211,7 +247,12 @@ wss.on('connection', function connection(ws) {
       } else {
         // killed
         if (attackedShip) {
-          killHits({ attack, client: currentClient.ws, attackedShip }); // bum bum
+          const attackedPositions = killHits({
+            attack,
+            client: currentClient.ws,
+            attackedShip,
+          }); // bum bum
+          attackedEnemyPositions.push(...attackedPositions);
         }
         // TODO: logic if all ships killed
         turn(attack.indexPlayer, gameConnections);

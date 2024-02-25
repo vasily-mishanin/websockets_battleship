@@ -171,6 +171,8 @@ export function killHits({ attack, client, attackedShip }: Props) {
       sendAttackFeedback(attack.indexPlayer, position, 'killed', client);
     });
   }
+
+  return positions;
 }
 
 function sendAttackFeedback(

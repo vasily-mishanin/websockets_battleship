@@ -1,6 +1,7 @@
 import {
   Attack,
   HitStatus,
+  Position,
   ProcessedGameShips,
   ProcessedShip,
   RawMessage,
@@ -130,4 +131,24 @@ export function processShip(ship: Ship): ProcessedShip {
   else {
     return { ...ship, positions: [{ x, y }], hittings: [] };
   }
+}
+
+// get random number
+export function getRandom(m: number, n: number) {
+  return m + Math.floor(Math.random() * (n + 1));
+}
+
+// getRandomPositionToAttack
+export function getRandomPositionToAttack(): Position {
+  return { x: getRandom(0, 9), y: getRandom(0, 9) };
+}
+
+export function hasAlreadyAttacked(
+  attackedEnemyPositions: Position[],
+  position: Position
+) {
+  return attackedEnemyPositions.some(
+    (attackedPosition) =>
+      attackedPosition.x === position.x && attackedPosition.y === position.y
+  );
 }
