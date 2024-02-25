@@ -16,13 +16,15 @@ import {
   Winner,
   WsConnection,
 } from './types';
-import { checkUserAndRoom, getId, processAttack, processShip } from './utils';
+import { checkUserAndRoom, getId, processShip } from './utils';
 import { registerUser } from './registerUser';
 import { updateRooms } from './updateRooms';
 import { updateWinners } from './updateWinners';
 import { createGame } from './createGame';
 import { startGame } from './startGame';
 import { makeTurn, turn } from './turn';
+import { processAttack } from './processAttack';
+import { killHits } from './killHits';
 
 const WSS_PORT = 3000;
 
@@ -165,11 +167,12 @@ wss.on('connection', function connection(ws) {
     if (messageType === 'attack') {
       const attack: Attack = JSON.parse(incomingData.data);
       console.log({ attack });
+      // if not user's turn
       if (attack.indexPlayer !== currentAttacker) {
         return;
       }
 
-      const { status, updatedShips } = processAttack(
+      const { status, updatedShips, attackedShip } = processAttack(
         processedGameShips,
         attack
       );
@@ -190,14 +193,8 @@ wss.on('connection', function connection(ws) {
       };
 
       currentClient.ws.send(JSON.stringify(message));
-      // // attacked id
-      // const attacked = processedGameShips
-      //   .filter((game) => game.gameId === attack.gameId)
-      //   .find((item) => item.indexPlayer !== attack.indexPlayer);
 
-      // console.log({ attacker: currentClient.id });
-      // console.log({ attacked: attacked?.indexPlayer });
-
+      // define whose next turn is
       const gameData = processedGameShips.filter(
         (data) => data.gameId === attack.gameId
       );
@@ -213,7 +210,9 @@ wss.on('connection', function connection(ws) {
         turn(attack.indexPlayer, gameConnections);
       } else {
         // killed
-        // TODO: logic for killed - send state for all cells around killed ship (bagaBUM)
+        if (attackedShip) {
+          killHits({ attack, client: currentClient.ws, attackedShip }); // bum bum
+        }
         // TODO: logic if all ships killed
         turn(attack.indexPlayer, gameConnections);
       }

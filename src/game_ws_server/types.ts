@@ -20,11 +20,13 @@ export type ShipType = 'small' | 'medium' | 'large' | 'huge';
 
 export type HitStatus = 'miss' | 'killed' | 'shot';
 
+export type Position = {
+  x: number;
+  y: number;
+};
+
 export type Ship = {
-  position: {
-    x: number;
-    y: number;
-  };
+  position: Position;
   direction: boolean;
   length: number;
   type: ShipType;
