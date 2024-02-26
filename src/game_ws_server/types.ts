@@ -134,10 +134,12 @@ export type ProcessedGameShips = {
 export type SinglePlay = {
   active: boolean;
   shipsAddedToGame: GameShips | null;
-  processedGameShips: ProcessedGameShips | null;
-  currentAttacker: number | 'bot';
+  playerShips: ProcessedGameShips | null; // ships with "positions", "hittings"
   botShips: ProcessedGameShips | null;
-  attackedEnemyPositions: Position[];
-  numberOfKilledShipsBot: number;
+  currentAttacker: number | 'bot';
+  attackedBotPositions: Position[];
+  attackedPlayerPositions: Position[];
+  numberOfBotKilledShips: number;
+  numberOfPlayerKilledShips: number;
   winner: Winner | null;
 };
