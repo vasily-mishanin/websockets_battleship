@@ -10,10 +10,10 @@ import WebSocket from 'ws';
 
 type Props = {
   attack: Attack;
-  client: WebSocket;
+  clients: WebSocket[];
   attackedShip: ProcessedShip;
 };
-export function killHits({ attack, client, attackedShip }: Props) {
+export function killHits({ attack, clients, attackedShip }: Props) {
   const { length, direction } = attackedShip;
   const { x, y } = attackedShip.position;
   let positions: Position[] = [];
@@ -90,7 +90,9 @@ export function killHits({ attack, client, attackedShip }: Props) {
       ];
     }
     positions.forEach((position) => {
-      sendAttackFeedback(attack.indexPlayer, position, 'miss', client);
+      clients.forEach((client) =>
+        sendAttackFeedback(attack.indexPlayer, position, 'miss', client)
+      );
     });
   }
   //vertical
@@ -168,7 +170,9 @@ export function killHits({ attack, client, attackedShip }: Props) {
     }
 
     positions.forEach((position) => {
-      sendAttackFeedback(attack.indexPlayer, position, 'miss', client);
+      clients.forEach((client) =>
+        sendAttackFeedback(attack.indexPlayer, position, 'miss', client)
+      );
     });
   }
 

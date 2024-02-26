@@ -129,3 +129,15 @@ export type ProcessedGameShips = {
   ships: ProcessedShip[];
   connection: WebSocket;
 };
+
+//
+export type SinglePlay = {
+  active: boolean;
+  shipsAddedToGame: GameShips | null;
+  processedGameShips: ProcessedGameShips | null;
+  currentAttacker: number | 'bot';
+  botShips: ProcessedGameShips | null;
+  attackedEnemyPositions: Position[];
+  numberOfKilledShipsBot: number;
+  winner: Winner | null;
+};

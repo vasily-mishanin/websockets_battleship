@@ -152,3 +152,8 @@ export function hasAlreadyAttacked(
       attackedPosition.x === position.x && attackedPosition.y === position.y
   );
 }
+
+// to add delay somewhere
+export function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
