@@ -142,4 +142,5 @@ export type SinglePlay = {
   numberOfBotKilledShips: number;
   numberOfPlayerKilledShips: number;
   winner: Winner | null;
+  botId: 0;
 };

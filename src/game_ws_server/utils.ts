@@ -7,6 +7,8 @@ import {
   RawMessage,
   Room,
   Ship,
+  ShipsAdd,
+  SinglePlay,
   User,
   WsConnection,
 } from './types';
@@ -157,3 +159,23 @@ export function hasAlreadyAttacked(
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+export function getInitialSingleGame(clientId: number): SinglePlay {
+  return {
+    active: false,
+    shipsAddedToGame: null,
+    playerShips: null,
+    botShips: null,
+    currentAttacker: clientId || 'bot',
+    attackedBotPositions: [],
+    attackedPlayerPositions: [],
+    numberOfBotKilledShips: 0,
+    numberOfPlayerKilledShips: 0,
+    winner: null,
+    botId: 0,
+  };
+}
+
+export const botShipsJSON =
+  '{"gameId":6,"ships":[{"position":{"x":1,"y":8},"direction":false,"type":"huge","length":4},{"position":{"x":5,"y":2},"direction":true,"type":"large","length":3},{"position":{"x":3,"y":2},"direction":true,"type":"large","length":3},{"position":{"x":0,"y":2},"direction":true,"type":"medium","length":2},{"position":{"x":7,"y":3},"direction":false,"type":"medium","length":2},{"position":{"x":6,"y":7},"direction":false,"type":"medium","length":2},{"position":{"x":9,"y":7},"direction":false,"type":"small","length":1},{"position":{"x":4,"y":0},"direction":true,"type":"small","length":1},{"position":{"x":1,"y":6},"direction":false,"type":"small","length":1},{"position":{"x":6,"y":0},"direction":true,"type":"small","length":1}],"indexPlayer":4}';
+export const botShips: ShipsAdd = JSON.parse(botShipsJSON);

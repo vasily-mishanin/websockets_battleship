@@ -7,6 +7,5 @@ export function updateRooms(rooms: Room[], connections: WsConnection[]) {
     data: JSON.stringify(rooms),
     id: 0,
   };
-  console.log('update_room', rooms);
   broadcast(connections, message);
 }

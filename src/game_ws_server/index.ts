@@ -22,9 +22,11 @@ import {
   WsConnection,
 } from './types';
 import {
+  botShips,
   checkUserAndRoom,
   delay,
   getId,
+  getInitialSingleGame,
   getRandomPositionToAttack,
   hasAlreadyAttacked,
   processShip,
@@ -64,21 +66,8 @@ wss.on('connection', function connection(ws) {
   const attackedEnemyPositions: Position[] = [];
   let numberOfKilledShips = 0;
 
-  const initialSingleGame: SinglePlay = {
-    active: false,
-    shipsAddedToGame: null,
-    playerShips: null,
-    botShips: null,
-    currentAttacker: clientId || 'bot',
-    attackedBotPositions: [],
-    attackedPlayerPositions: [],
-    numberOfBotKilledShips: 0,
-    numberOfPlayerKilledShips: 0,
-    winner: null,
-  };
-
   // single_play data
-  let singlePlay: SinglePlay = initialSingleGame;
+  let singlePlay: SinglePlay = getInitialSingleGame(clientId);
 
   console.log('Connection - client ID - ', clientId);
   ws.on('message', async function message(rawData) {
@@ -158,7 +147,6 @@ wss.on('connection', function connection(ws) {
         (room) => room.roomId === indexRoom
       );
 
-      console.log('DEBUG - roomUsers', completedRoom?.roomUsers);
       if (!completedRoom) {
         console.log('Error - no completedRoom');
         throw Error('Error - no completedRoom');
@@ -189,9 +177,7 @@ wss.on('connection', function connection(ws) {
       );
       // if both players send their ships (not single play)
       if (shipsOfOneGame.length > 1) {
-        console.log('start_game', shipsOfOneGame);
         startGame(shipsOfOneGame);
-        console.log('turn');
         const gameConnections = shipsOfOneGame.map((item) => item.connection);
         turn(currentClient.id, gameConnections);
         currentAttacker = currentClient.id;
@@ -236,8 +222,6 @@ wss.on('connection', function connection(ws) {
 
         attackedEnemyPositions.push({ x: attack.x, y: attack.y });
       }
-
-      console.log({ attack });
 
       if (messageType === 'randomAttack') {
         attack = JSON.parse(incomingData.data);
@@ -347,7 +331,7 @@ wss.on('connection', function connection(ws) {
     // SINGLE PLAY
 
     if (messageType === 'single_play') {
-      singlePlay = initialSingleGame;
+      singlePlay = getInitialSingleGame(clientId);
       singlePlay.active = true;
       const game: Game = {
         idGame: id(),
@@ -375,7 +359,13 @@ wss.on('connection', function connection(ws) {
       };
 
       //// bot adds its ships(same as ours)
-      singlePlay.botShips = singlePlay.playerShips;
+      //singlePlay.botShips = singlePlay.playerShips;
+      singlePlay.botShips = {
+        gameId: botShips.gameId,
+        indexPlayer: singlePlay.botId,
+        connection: ws,
+        ships: botShips.ships.map((ship) => processShip(ship)),
+      };
       /// start single play
 
       const singleGame: GameStart = {
@@ -390,7 +380,6 @@ wss.on('connection', function connection(ws) {
       };
 
       currentClient.ws.send(JSON.stringify(message));
-      console.log('turn');
 
       turn(currentClient.id, [currentClient.ws]);
       singlePlay.currentAttacker = currentClient.id;
@@ -402,9 +391,6 @@ wss.on('connection', function connection(ws) {
       (messageType === 'attack' || messageType === 'randomAttack')
     ) {
       let attack: Attack = JSON.parse(incomingData.data);
-
-      console.log('PLAYERs SHIPS', singlePlay.playerShips);
-      console.log('BOTs SHIPS', singlePlay.botShips);
 
       // if not user's turn - not react on clicks
       if (attack.indexPlayer !== singlePlay.currentAttacker) {
@@ -452,8 +438,6 @@ wss.on('connection', function connection(ws) {
         attack.y = randomPosition.y;
         singlePlay.attackedBotPositions.push(attackedPosition);
       }
-
-      console.log('Single Play', { attack });
 
       if (singlePlay.playerShips && singlePlay.botShips) {
         const { status, updatedShips, attackedShip } = processSingePlayAttack(
@@ -518,13 +502,12 @@ wss.on('connection', function connection(ws) {
         // else define whose next turn is
         // if player miss - bot attacks
         if (status === 'miss') {
-          const botId = 0;
-          singlePlay.currentAttacker = botId;
+          singlePlay.currentAttacker = singlePlay.botId;
           // BOT ATTACKS
           let botAttackResult: HitStatus;
           do {
             await delay(1200);
-            turn(botId, [currentClient.ws]);
+            turn(singlePlay.botId, [currentClient.ws]);
             let botAttackedPosition = getRandomPositionToAttack();
             while (
               hasAlreadyAttacked(
@@ -550,7 +533,7 @@ wss.on('connection', function connection(ws) {
 
             // respond to attacked user (current client)
             const attackFeedback: AttackFeedback = {
-              currentPlayer: botId, // who attacked
+              currentPlayer: singlePlay.botId, // who attacked
               position: botAttackedPosition,
               status: statusBotAttack,
             };
@@ -569,7 +552,7 @@ wss.on('connection', function connection(ws) {
               const attackedPositions = killHits({
                 attack: {
                   gameId: singlePlay.playerShips.gameId,
-                  indexPlayer: botId,
+                  indexPlayer: singlePlay.botId,
                   x: botAttackedPosition.x,
                   y: botAttackedPosition.y,
                 },
@@ -585,7 +568,7 @@ wss.on('connection', function connection(ws) {
               singlePlay.numberOfPlayerKilledShips === TOTAL_NUMBER_OF_SHIPS
             ) {
               const finishFeedback: GameFinish = {
-                winPlayer: botId,
+                winPlayer: singlePlay.botId,
               };
 
               finishGame(finishFeedback, [currentClient]);
