@@ -90,7 +90,7 @@ export function killHits({ attack, client, attackedShip }: Props) {
       ];
     }
     positions.forEach((position) => {
-      sendAttackFeedback(attack.indexPlayer, position, 'killed', client);
+      sendAttackFeedback(attack.indexPlayer, position, 'miss', client);
     });
   }
   //vertical
@@ -168,7 +168,7 @@ export function killHits({ attack, client, attackedShip }: Props) {
     }
 
     positions.forEach((position) => {
-      sendAttackFeedback(attack.indexPlayer, position, 'killed', client);
+      sendAttackFeedback(attack.indexPlayer, position, 'miss', client);
     });
   }
 

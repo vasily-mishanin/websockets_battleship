@@ -14,7 +14,8 @@ export type MessageType =
   | 'create_room'
   | 'add_user_to_room'
   | 'add_ships'
-  | 'randomAttack';
+  | 'randomAttack'
+  | 'single_play';
 
 export type ShipType = 'small' | 'medium' | 'large' | 'huge';
 

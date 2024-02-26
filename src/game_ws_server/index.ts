@@ -3,6 +3,7 @@ import {
   Attack,
   AttackFeedback,
   Game,
+  GameFinish,
   GameShips,
   Position,
   ProcessedGameShips,
@@ -32,6 +33,7 @@ import { startGame } from './startGame';
 import { makeTurn, turn } from './turn';
 import { processAttack } from './processAttack';
 import { killHits } from './killHits';
+import { finishGame } from './finishGame';
 
 const WSS_PORT = 3000;
 
@@ -39,7 +41,7 @@ export const wss = new WebSocketServer({ port: WSS_PORT });
 
 const players: User[] = [];
 let rooms: Rooms = [];
-const winners: Winner[] = [];
+let winners: Winner[] = [];
 const games: { room: Room; gameId: number }[] = [];
 const shipsAddedToGames: GameShips[] = [];
 let processedGameShips: ProcessedGameShips[] = [];
@@ -48,11 +50,14 @@ let currentAttacker = 0;
 const id = getId();
 const connections: WsConnection[] = [];
 
+const TOTAL_NUMBER_OF_SHIPS = 10;
+
 wss.on('connection', function connection(ws) {
   const clientId = id();
   const currentClient = { id: clientId, ws };
   connections.push(currentClient);
   const attackedEnemyPositions: Position[] = [];
+  let numberOfKilledShips = 0;
 
   console.log('Connection - client ID - ', clientId);
   ws.on('message', function message(rawData) {
@@ -60,7 +65,7 @@ wss.on('connection', function connection(ws) {
     const incomingData: RawMessage = JSON.parse(rawData.toString());
     const messageType = incomingData.type;
 
-    console.log(clientId, incomingData);
+    console.log(`client ${clientId}`, incomingData);
 
     // HANDLERS
     // register
@@ -238,23 +243,50 @@ wss.on('connection', function connection(ws) {
 
       currentClient.ws.send(JSON.stringify(message));
 
-      // define whose next turn is
+      // killed - hits around the ship
+      if (attackedShip && status === 'killed') {
+        const attackedPositions = killHits({
+          attack,
+          client: currentClient.ws,
+          attackedShip,
+        }); // bum bum
+        attackedEnemyPositions.push(...attackedPositions);
+        numberOfKilledShips += 1;
+      }
+
+      // if all ships killed
+      if (numberOfKilledShips === TOTAL_NUMBER_OF_SHIPS) {
+        const finishFeedback: GameFinish = {
+          winPlayer: attack.indexPlayer,
+        };
+
+        finishGame(finishFeedback, connections);
+
+        const attacker = players.find(
+          (player) => player.index === attack.indexPlayer
+        );
+
+        if (attacker && winners.some((w) => w.name === attacker.name)) {
+          winners = winners.map((winner) =>
+            winner.name === attacker?.name
+              ? { ...winner, wins: winner.wins + 1 }
+              : winner
+          );
+        } else if (attacker) {
+          winners.push({ name: attacker?.name, wins: 1 });
+        }
+
+        updateWinners(winners, connections);
+        return;
+      }
+
+      // else define whose next turn is
       if (status === 'miss' && anotherPlayerId) {
         turn(anotherPlayerId, gameConnections);
         currentAttacker = anotherPlayerId;
       } else if (status === 'shot') {
         turn(attack.indexPlayer, gameConnections);
       } else {
-        // killed
-        if (attackedShip) {
-          const attackedPositions = killHits({
-            attack,
-            client: currentClient.ws,
-            attackedShip,
-          }); // bum bum
-          attackedEnemyPositions.push(...attackedPositions);
-        }
-        // TODO: logic if all ships killed
         turn(attack.indexPlayer, gameConnections);
       }
     }
